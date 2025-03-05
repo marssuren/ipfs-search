@@ -1,75 +1,70 @@
 /*
-Package config provides central and canonical representation, reading, parsing
-and validation of configuration for components.
+Package config 包提供了组件配置的中央规范表示、读取、解析和验证功能。
 
-Configuration consists of 2 representations:
+配置由两种表示形式组成：
 
-1. The component-specific configuration Config-structs and DefaultConfig()
-default generators, which have no dependencies on nor awareness of other
-components or their configuration.
+1. 组件特定配置 - 各组件的 Config 结构体和 DefaultConfig() 默认值生成器，
+   它们不依赖于也不感知其他组件或其配置。
 
-2. Central and canonical configuration (this package), importing and wrapping
-the various component configuration, wiring it into a single Config struct.
+2. 中央规范配置（本包）- 导入并封装各种组件配置，将它们连接到单个 Config 结构体中。
 
-For example, the crawler package contains a Config struct as well as a
-DefaultConfig() function. The config package contains a Crawler struct, wrapping
-the Config from the crawler package, and CrawlerDefaults() function wrapping the
-DefaultConfig() function from the crawler package. The wrapped Crawler struct
-provides tags for reading configuration values from a YAML configuration file
-and/or OS environment variables.
+例如，crawler 包包含 Config 结构体和 DefaultConfig() 函数。config 包包含一个
+Crawler 结构体，它封装了来自 crawler 包的 Config，以及 CrawlerDefaults()
+函数封装了来自 crawler 包的 DefaultConfig() 函数。封装后的 Crawler 结构体
+提供了从 YAML 配置文件和/或操作系统环境变量读取配置值的标签。
 
-The Crawler-struct is then contained within the Config-struct, which performs
-reading, parsing and validation of configuration files as well as OS environment
-variables. In order to acquire the crawler-specific configuration from the Config-struct,
-the CrawlerConfig() method must be called.
+Crawler 结构体被包含在 Config 结构体中，后者执行配置文件和操作系统环境变量的
+读取、解析和验证。要从 Config 结构体获取 crawler 特定的配置，必须调用
+CrawlerConfig() 方法。
 */
+
 package config
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os"
-	"strings"
+	"io/ioutil" // 文件读写
+	"log"       // 日志
+	"os"        // 系统交互
+	"strings"   // 字符串处理
 
-	env "github.com/ipfs-search/go-env"
-	yaml "gopkg.in/yaml.v3"
+	env "github.com/ipfs-search/go-env" // 环境变量解析库 tocheck: 具体实现如何映射环境变量
+	yaml "gopkg.in/yaml.v3"             // YAML处理库
 )
 
-// Config contains the configuration for all components.
+// 聚合所有组件配置的顶级结构
 type Config struct {
-	IPFS       `yaml:"ipfs"`
-	OpenSearch `yaml:"opensearch"`
-	Redis      `yaml:"redis"`
-	AMQP       `yaml:"amqp"`
-	Tika       `yaml:"tika"`
-	NSFW       `yaml:"nsfw"`
+	IPFS       `yaml:"ipfs"`       // IPFS节点配置
+	OpenSearch `yaml:"opensearch"` // OpenSearch配置
+	Redis      `yaml:"redis"`      // Redis配置
+	AMQP       `yaml:"amqp"`       // RabbitMQ配置
+	Tika       `yaml:"tika"`       // Tika文本解析服务配置
+	NSFW       `yaml:"nsfw"`       // NSFW内容检测配置
 
-	Instr   `yaml:"instrumentation"`
-	Crawler `yaml:"crawler"`
-	Sniffer `yaml:"sniffer"`
-	Indexes `yaml:"indexes"`
-	Queues  `yaml:"queues"`
-	Workers `yaml:"workers"`
+	Instr   `yaml:"instrumentation"` // 监控指标配置
+	Crawler `yaml:"crawler"`         // 爬虫组件配置
+	Sniffer `yaml:"sniffer"`         // 嗅探器配置
+	Indexes `yaml:"indexes"`         // 索引定义
+	Queues  `yaml:"queues"`          // 消息队列定义
+	Workers `yaml:"workers"`         // 工作线程池配置
 }
 
-// String renders config as YAML
+// 将Config序列化为YAML字符串（调试用）
 func (c *Config) String() string {
-	bs, err := yaml.Marshal(c)
+	bs, err := yaml.Marshal(c) // tocheck: 各子结构是否实现yaml序列化
 	if err != nil {
-		log.Fatalf("unable to marshal config to YAML: %v", err)
+		log.Fatalf("YAML序列化失败: %v", err) // 致命错误直接退出
 	}
 	return string(bs)
 }
 
-// ReadFromFile reads configuration options from specified YAML file
+// 从YAML文件读取配置（覆盖默认值）
 func (c *Config) ReadFromFile(filename string) error {
-	yamlFile, err := ioutil.ReadFile(filename)
+	yamlFile, err := ioutil.ReadFile(filename) // 读取文件内容
 	if err != nil {
 		return err
 	}
 
-	err = yaml.Unmarshal(yamlFile, c)
+	err = yaml.Unmarshal(yamlFile, c) // 反序列化到Config结构体
 	if err != nil {
 		return err
 	}
@@ -77,9 +72,9 @@ func (c *Config) ReadFromFile(filename string) error {
 	return nil
 }
 
-// ReadFromEnv reads configuration options from environment
+// 从环境变量读取配置（覆盖文件/默认值）
 func (c *Config) ReadFromEnv() error {
-	_, err := env.UnmarshalFromEnviron(c)
+	_, err := env.UnmarshalFromEnviron(c) // tocheck: 环境变量命名规则（如IPFS_ADDRESS）
 
 	if err != nil {
 		return err
@@ -87,30 +82,30 @@ func (c *Config) ReadFromEnv() error {
 	return nil
 }
 
-// Check configuration file integrity.
+// 验证必填字段是否已设置
 func (c *Config) Check() error {
-	zeroElements := findZeroElements(*c)
+	zeroElements := findZeroElements(*c) // tocheck: findZeroElements实现（检查零值字段）
 	if len(zeroElements) > 0 {
-		return fmt.Errorf("Missing configuration option(s): %s", strings.Join(zeroElements, ", "))
+		return fmt.Errorf("缺失配置项: %s", strings.Join(zeroElements, ", "))
 
 	}
 
 	return nil
 }
 
-// Marshall returns the config serialized to bytes[]
+// 序列化为YAML字节流
 func (c *Config) Marshall() ([]byte, error) {
 	return yaml.Marshal(c)
 }
 
-// Write writes configuration to file as YAML.
+// 将配置写入文件（生成默认配置时使用）
 func (c *Config) Write(configFile string) error {
 	bytes, err := c.Marshall()
 	if err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(configFile, bytes, 0644)
+	err = ioutil.WriteFile(configFile, bytes, 0644) // 权限：用户可读写
 	if err != nil {
 		return err
 	}
@@ -118,7 +113,7 @@ func (c *Config) Write(configFile string) error {
 	return nil
 }
 
-// Dump writes configuration to standard output.
+// 打印当前配置到标准输出（调试用）
 func (c *Config) Dump() error {
 	bytes, err := c.Marshall()
 	if err != nil {
@@ -130,7 +125,7 @@ func (c *Config) Dump() error {
 	return err
 }
 
-// Get configuration from defaults, optional configuration file, or environment.
+// 整合默认值→文件→环境变量，返回最终配置
 func Get(configFile string) (*Config, error) {
 	// Start with empty configuration
 	cfg := Default()
@@ -140,14 +135,14 @@ func Get(configFile string) (*Config, error) {
 
 		err := cfg.ReadFromFile(configFile)
 		if err != nil {
-			return nil, fmt.Errorf("Error reading configuration file: %v", err)
+			return nil, fmt.Errorf("配置文件错误: %v", err)
 		}
 	}
 
 	// Read configuration values from env
 	err := cfg.ReadFromEnv()
 	if err != nil {
-		return nil, fmt.Errorf("Error reading configuration from env: %v", err)
+		return nil, fmt.Errorf("环境变量错误: %v", err)
 	}
 
 	return cfg, nil
