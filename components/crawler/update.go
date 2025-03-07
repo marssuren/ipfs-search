@@ -13,13 +13,15 @@ import (
 	t "github.com/ipfs-search/ipfs-search/types"
 )
 
+// 添加引用，返回更新后的引用列表和是否有新增
 func appendReference(refs index_types.References, r *t.Reference) (index_types.References, bool) {
 	if r.Parent == nil {
-		// No new reference, not updating
-		// Note: this situation should never happen and is potentially a bug.
+		// 没有新引用，不更新
+		// 注意：这种情况不应该发生，可能是一个 bug
 		return refs, false
 	}
 
+	// 检查是否已存在相同引用
 	for _, indexedRef := range refs {
 		if indexedRef.ParentHash == r.Parent.ID && indexedRef.Name == r.Name {
 			// Existing reference, not updating
@@ -27,20 +29,21 @@ func appendReference(refs index_types.References, r *t.Reference) (index_types.R
 		}
 	}
 
+	// 添加新引用
 	return append(refs, index_types.Reference{
 		ParentHash: r.Parent.ID,
 		Name:       r.Name,
 	}), true
 }
 
-// updateExisting updates known existing items.
+// updateExisting 更新已知存在的项目
 func (c *Crawler) updateExisting(ctx context.Context, i *existingItem) error {
 	ctx, span := c.Tracer.Start(ctx, "crawler.updateExisting")
 	defer span.End()
 
 	switch i.Source {
 	case t.DirectorySource:
-		// Item referenced from a directory, consider updating references (but not last-seen).
+		// 从目录引用的Item, 考虑更新引用（但不更新最后访问时间）
 		refs, refsUpdated := appendReference(i.References, &i.AnnotatedResource.Reference)
 
 		if refsUpdated {
@@ -60,13 +63,13 @@ func (c *Crawler) updateExisting(ctx context.Context, i *existingItem) error {
 		// Item sniffed, conditionally update last-seen.
 		now := time.Now()
 
-		// Strip milliseconds to cater to legacy ES index format.
+		// 去除毫秒以适配旧的 ES 索引格式
 		// This can be safely removed after the next reindex with _nomillis removed from time format.
 		now = now.Truncate(time.Second)
 
 		var isRecent bool
 		if i.LastSeen == nil {
-			log.Printf("LastSeen is nil, overriding isRecent.")
+			log.Printf("LastSeen 为空，强制设置 isRecent 为 true")
 			isRecent = true
 		} else {
 			isRecent = now.Sub(*i.LastSeen) > c.config.MinUpdateAge
@@ -85,7 +88,7 @@ func (c *Crawler) updateExisting(ctx context.Context, i *existingItem) error {
 		}
 
 	case t.ManualSource, t.UserSource:
-		// Do not update based on manual or user input.
+		// 不基于手动或用户输入进行更新
 
 	default:
 		// Panic for unexpected Source values, instead of hard failing.
@@ -97,15 +100,15 @@ func (c *Crawler) updateExisting(ctx context.Context, i *existingItem) error {
 	return nil
 }
 
-// deletePartial deletes partial items.
+// deletePartial 删除部分项目
 func (c *Crawler) deletePartial(ctx context.Context, i *existingItem) error {
 	return c.indexes.Partials.Delete(ctx, i.ID)
 }
 
-// processPartial processes partials found in index; previously recognized as an unreferenced partial
+// processPartial 处理索引中发现的部分项目
 func (c *Crawler) processPartial(ctx context.Context, i *existingItem) (bool, error) {
 	if i.Reference.Parent == nil {
-		log.Printf("Quick-skipping unreferenced partial %v", i)
+		log.Printf("快速跳过未引用的部分项目 %v", i)
 
 		// Skip unreferenced partial
 		return true, nil
@@ -120,16 +123,17 @@ func (c *Crawler) processPartial(ctx context.Context, i *existingItem) (bool, er
 	return false, nil
 }
 
+// 处理已存在的项目
 func (c *Crawler) processExisting(ctx context.Context, i *existingItem) (bool, error) {
 	switch i.Index {
 	case c.indexes.Invalids:
-		// Already indexed as invalid; we're done
+		// 已标记为无效，处理完成
 		return true, nil
 	case c.indexes.Partials:
 		return c.processPartial(ctx, i)
 	}
 
-	// Update item and we're done.
+	//  更新项目并完成
 	if err := c.updateExisting(ctx, i); err != nil {
 		return true, err
 	}
@@ -137,7 +141,7 @@ func (c *Crawler) processExisting(ctx context.Context, i *existingItem) (bool, e
 	return true, nil
 }
 
-// updateMaybeExisting updates an item when it exists and returnes true when item exists.
+// updateMaybeExisting 检查并更新可能存在的项目
 func (c *Crawler) updateMaybeExisting(ctx context.Context, r *t.AnnotatedResource) (bool, error) {
 	ctx, span := c.Tracer.Start(ctx, "crawler.updateMaybeExisting")
 	defer span.End()
