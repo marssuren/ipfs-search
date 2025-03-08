@@ -1,28 +1,28 @@
 package config
 
-// Queue holds the configuration for a single Queue.
+// Queue 结构体表示单个队列的配置。
 type Queue struct {
-	Name string `yaml:"name"` // Name of the Queue.
+	Name string `yaml:"name"` // 队列的名称。
 }
 
-// Queues represents the various queues we're using
+// Queues 结构体表示我们正在使用的各种队列。
 type Queues struct {
-	Files       Queue `yaml:"files"`       // Resources known to be files.
-	Directories Queue `yaml:"directories"` // Resources known to be directories.
-	Hashes      Queue `yaml:"hashes"`      // Resources with unknown type.
+	Files       Queue `yaml:"files"`       // 已知是文件的资源队列。
+	Directories Queue `yaml:"directories"` // 已知是目录的资源队列。
+	Hashes      Queue `yaml:"hashes"`      // 类型未知的资源队列。
 }
 
-// QueuesDefaults returns the default queues.
+// QueuesDefaults 函数返回默认的队列配置。
 func QueuesDefaults() Queues {
 	return Queues{
 		Files: Queue{
-			Name: "files",
+			Name: "files", // 文件队列的默认名称。
 		},
 		Directories: Queue{
-			Name: "directories",
+			Name: "directories", // 目录队列的默认名称。
 		},
 		Hashes: Queue{
-			Name: "hashes",
+			Name: "hashes", // 类型未知资源队列的默认名称。
 		},
 	}
 }

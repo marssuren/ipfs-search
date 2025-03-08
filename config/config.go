@@ -31,7 +31,7 @@ import (
 	yaml "gopkg.in/yaml.v3"             // YAML处理库
 )
 
-// 聚合所有组件配置的顶级结构
+// Config 聚合所有组件配置的顶级结构
 type Config struct {
 	IPFS       `yaml:"ipfs"`       // IPFS节点配置
 	OpenSearch `yaml:"opensearch"` // OpenSearch配置
@@ -57,7 +57,7 @@ func (c *Config) String() string {
 	return string(bs)
 }
 
-// 从YAML文件读取配置（覆盖默认值）
+// ReadFromFile 从YAML文件读取配置（覆盖默认值）
 func (c *Config) ReadFromFile(filename string) error {
 	yamlFile, err := ioutil.ReadFile(filename) // 读取文件内容
 	if err != nil {
@@ -72,7 +72,7 @@ func (c *Config) ReadFromFile(filename string) error {
 	return nil
 }
 
-// 从环境变量读取配置（覆盖文件/默认值）
+// ReadFromEnv 从环境变量读取配置（覆盖文件/默认值）
 func (c *Config) ReadFromEnv() error {
 	_, err := env.UnmarshalFromEnviron(c) // tocheck: 环境变量命名规则（如IPFS_ADDRESS）
 
@@ -82,7 +82,7 @@ func (c *Config) ReadFromEnv() error {
 	return nil
 }
 
-// 验证必填字段是否已设置
+// Check 验证必填字段是否已设置
 func (c *Config) Check() error {
 	zeroElements := findZeroElements(*c) // tocheck: findZeroElements实现（检查零值字段）
 	if len(zeroElements) > 0 {
@@ -93,7 +93,7 @@ func (c *Config) Check() error {
 	return nil
 }
 
-// 序列化为YAML字节流
+// Marshall 序列化为YAML字节流
 func (c *Config) Marshall() ([]byte, error) {
 	return yaml.Marshal(c)
 }
@@ -113,7 +113,7 @@ func (c *Config) Write(configFile string) error {
 	return nil
 }
 
-// 打印当前配置到标准输出（调试用）
+// Dump 打印当前配置到标准输出（调试用）
 func (c *Config) Dump() error {
 	bytes, err := c.Marshall()
 	if err != nil {
@@ -125,7 +125,7 @@ func (c *Config) Dump() error {
 	return err
 }
 
-// 整合默认值→文件→环境变量，返回最终配置
+// Get 整合默认值→文件→环境变量，返回最终配置
 func Get(configFile string) (*Config, error) {
 	// Start with empty configuration
 	cfg := Default()

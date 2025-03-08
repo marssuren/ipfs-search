@@ -11,7 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/ipfs-search/ipfs-search/commands" // tocheck: 核心命令实现
+	"github.com/ipfs-search/ipfs-search/commands"
 	"github.com/ipfs-search/ipfs-search/config"
 	"gopkg.in/urfave/cli.v1" // CLI框架
 )
@@ -117,7 +117,6 @@ func checkConfig(c *cli.Context) error {
 
 // config generate子命令实现
 func generateConfig(c *cli.Context) error {
-	// tocheck: 获取默认配置结构
 	cfg := config.Default()
 
 	configFile := c.GlobalString("config")
@@ -126,7 +125,6 @@ func generateConfig(c *cli.Context) error {
 	}
 
 	fmt.Printf("正在生成默认配置到: %s\n", configFile)
-	// tocheck: 将默认配置写入文件
 	return cfg.Write(configFile)
 }
 
@@ -137,7 +135,6 @@ func dumpConfig(c *cli.Context) error {
 		return cli.NewExitError(err.Error(), 1)
 	}
 
-	// tocheck: 将配置序列化输出到控制台
 	return cfg.Dump()
 }
 
@@ -164,7 +161,6 @@ func add(c *cli.Context) error {
 
 	fmt.Printf("正在添加哈希 '%s' 到队列\n", hash)
 
-	// tocheck: 调用commands包的哈希添加逻辑
 	err = commands.AddHash(ctx, cfg, hash)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
@@ -215,7 +211,6 @@ func crawl(c *cli.Context) error {
 		return cli.NewExitError(err.Error(), 1)
 	}
 
-	// tocheck: 调用commands包的爬虫主逻辑
 	err = commands.Crawl(ctx, cfg)
 	if err != nil {
 		return cli.NewExitError(err.Error(), 1)
