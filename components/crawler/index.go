@@ -65,7 +65,7 @@ func (c *Crawler) getFileProperties(ctx context.Context, r *t.AnnotatedResource)
 	for _, e := range c.extractors {
 		err = e.Extract(ctx, r, properties)
 		if errors.Is(err, extractor.ErrFileTooLarge) { // 处理过大文件
-			// Interpret files which are too large as invalid resources; prevent repeated attempts.
+			// 将过大的文件视为无效资源；防止重复尝试
 			span.RecordError(err)
 			return nil, fmt.Errorf("%w: %v", t.ErrInvalidResource, err) // 包装错误
 		}

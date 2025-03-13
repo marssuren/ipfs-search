@@ -16,13 +16,14 @@ import (
 	"github.com/ipfs-search/ipfs-search/utils"
 )
 
+// consumeChans 定义了一个结构体，包含三个只读的 RabbitMQ 消息通道
 type consumeChans struct {
 	Files       <-chan samqp.Delivery
 	Directories <-chan samqp.Delivery
 	Hashes      <-chan samqp.Delivery
 }
 
-// Pool represents a pool of pools.
+// Pool 表示一个池的集合。
 type Pool struct {
 	config  *config.Config
 	dialer  *utils.RetryingDialer
@@ -32,6 +33,7 @@ type Pool struct {
 	*instr.Instrumentation
 }
 
+// startWorkers 启动指定数量的 worker 来处理消息
 func (p *Pool) startWorkers(ctx context.Context, deliveries <-chan samqp.Delivery, workers int, poolName string) {
 	ctx, span := p.Tracer.Start(ctx, "crawler.pool.start")
 	defer span.End()
@@ -45,7 +47,7 @@ func (p *Pool) startWorkers(ctx context.Context, deliveries <-chan samqp.Deliver
 	}
 }
 
-// Start launches the pool.
+// Start 方法启动整个池。
 func (p *Pool) Start(ctx context.Context) {
 	ctx, span := p.Tracer.Start(ctx, "crawler.pool.Start")
 	defer span.End()
@@ -55,6 +57,7 @@ func (p *Pool) Start(ctx context.Context) {
 	p.startWorkers(ctx, p.consumeChans.Directories, p.config.Workers.DirectoryWorkers, "directories")
 }
 
+// init 初始化 Pool 对象
 func (p *Pool) init(ctx context.Context) error {
 	var err error
 
@@ -80,7 +83,7 @@ func (p *Pool) init(ctx context.Context) error {
 	return nil
 }
 
-// New initializes and returns a new pool pool.
+// New 函数初始化并返回一个新的 Pool 对象。
 func New(ctx context.Context, c *config.Config, i *instr.Instrumentation) (*Pool, error) {
 	if i == nil {
 		panic("Instrumentation cannot be null.")
