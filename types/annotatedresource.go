@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// AnnotatedResource annotates a referenced Resource with additional information.
+// AnnotatedResource 用于给引用的资源添加额外的信息。
 type AnnotatedResource struct {
 	*Resource
 	Source    SourceType `json:",omitempty"`
@@ -12,7 +12,7 @@ type AnnotatedResource struct {
 	Stat      `json:",omitempty"`
 }
 
-// String returns the first reference or the URI.
+// String 方法返回第一个引用的名称或 URI。
 func (r *AnnotatedResource) String() string {
 	if r.Reference.Name != "" {
 		return fmt.Sprintf("%s (%s)", r.Reference.Name, r.URI())
